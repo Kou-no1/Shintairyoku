@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>新体力テスト 記録用紙</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --row-even:#eef5fc;--row-odd:#ffffff;
+  --hd:#1a3a5c;--hd2:#2d6a9f;--hd2t:#e8f4fd;
+  --hdsub:#1b4f80;--namebg:#ddeeff;
+  --border:#b0cce4;--bdark:#2d6a9f;--bsep:#1a3a5c;
+  --font:'Noto Sans JP',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:#dde4ef;}
+
+.toolbar{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:var(--hd);color:white;padding:9px 16px;
+  position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.35);
+}
+.toolbar h1{font-size:13px;font-weight:700;letter-spacing:.06em;white-space:nowrap;}
+.tlbl{font-size:12px;color:#b8d8f5;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.tlbl select,.tlbl input{
+  font-size:12px;padding:4px 6px;border-radius:5px;
+  border:1px solid #99b;background:white;color:#222;font-family:var(--font);
+}
+.tlbl select{width:68px;}.tlbl input{width:128px;}
+.btn-print{
+  background:#27ae60;color:white;border:none;
+  padding:7px 15px;border-radius:6px;font-size:12px;font-weight:700;
+  cursor:pointer;letter-spacing:.04em;margin-left:auto;white-space:nowrap;
+}
+.btn-print:hover{background:#1e9450;}
+
+.page-wrap{
+  display:flex;gap:10px;align-items:flex-start;
+  max-width:1680px;margin:12px auto;padding:0 8px;
+}
+
+.roster-panel{
+  background:white;border-radius:10px;border:2px solid #7da832;
+  min-width:180px;max-width:195px;flex-shrink:0;
+  box-shadow:0 2px 10px rgba(0,0,0,.09);overflow:hidden;
+}
+.roster-hd{background:#7da832;color:white;padding:7px 11px;font-size:12px;font-weight:700;letter-spacing:.05em;}
+.roster-hint{font-size:10px;color:#3d6210;padding:5px 9px;background:#f3f9e3;border-bottom:1px solid #cce070;line-height:1.65;}
+.roster-ta{
+  width:100%;min-height:460px;border:none;resize:vertical;
+  font-family:var(--font);font-size:12px;padding:7px 9px;
+  color:#1a3a5c;background:#f7fce5;outline:none;line-height:2.1;
+}
+.roster-ta:focus{background:#fffde7;}
+.btn-apply{width:100%;padding:8px;background:var(--hd);color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.04em;}
+.btn-apply:hover{background:var(--hd2);}
+
+.sheet-wrap{flex:1;background:white;border-radius:10px;overflow:hidden;box-shadow:0 2px 18px rgba(0,0,0,.11);min-width:0;}
+.sheet-hd{background:var(--hd);color:white;text-align:center;padding:9px 16px 6px;}
+.sheet-hd .ttl{font-size:17px;font-weight:700;letter-spacing:.14em;}
+.sheet-hd .sub{font-size:10.5px;color:#9fc9f0;margin-top:2px;letter-spacing:.06em;}
+
+.date-row{
+  background:var(--namebg);border-bottom:2px solid var(--bdark);
+  padding:5px 18px;font-size:12px;color:#1a3a5c;font-weight:600;
+  display:flex;align-items:center;gap:5px;
+}
+.date-inp{
+  background:transparent;border:none;border-bottom:1.5px solid var(--bdark);
+  font-size:12px;color:#1a3a5c;padding:1px 4px;font-family:var(--font);outline:none;width:155px;
+}
+.date-inp:focus{background:#fffde7;}
+
+.tbl-scroll{overflow-x:auto;}
+
+table.rec{width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed;}
+table.rec th{
+  background:var(--hd2);color:var(--hd2t);
+  padding:4px 1px;text-align:center;border:1px solid var(--bdark);
+  font-size:9.5px;font-weight:700;vertical-align:middle;line-height:1.3;
+}
+table.rec th.h-dark{background:#112c47;color:#cde;}
+table.rec th.h-sub{background:var(--hdsub);color:#b8d8f5;font-size:8px;padding:3px 1px;}
+
+table.rec td{border:1px solid var(--border);padding:2px 1px;text-align:center;vertical-align:middle;height:25px;}
+table.rec tr:nth-child(even) td{background:var(--row-even);}
+table.rec tr:nth-child(odd)  td{background:var(--row-odd);}
+
+table.rec td.td-no{color:#bbb;font-size:9px;background:#f0f4f9!important;}
+table.rec td.td-name{
+  background:var(--namebg)!important;text-align:left;font-weight:600;
+  font-size:11.5px;color:#1a3a5c;padding:2px 5px;white-space:nowrap;
+  overflow:hidden;border:1px solid var(--bdark);
+  /* フォント自動縮小はJSで処理するためmin-font-sizeを下限に */
+}
+/* 名前の自動縮小ラッパー */
+.name-fit{
+  display:inline-block;width:100%;
+  white-space:nowrap;overflow:hidden;
+  line-height:1.2;
+  font-size:inherit;
+  /* transform-originを左にしてはみ出し防止 */
+  transform-origin:left center;
+}
+table.rec tfoot td{background:#c4daf2!important;font-weight:700;font-size:9.5px;color:#1a3a5c;height:21px;}
+
+/* 画面表示用列幅 */
+.w-no  {width:20px;}
+.w-name{width:130px;}
+.w-s   {width:52px;}
+
+.sep-r{border-right:2px solid var(--bsep)!important;}
+
+.foot-note{font-size:9.5px;color:#888;padding:4px 12px;border-top:1px solid #dde;text-align:right;}
+
+/* ==========================================
+   印刷最適化 B4横 (364×257mm, margin 6mm)
+   印刷域: 352×245mm = 997.9pt × 694.6pt
+
+   列構成:
+     No(1) + 名前×2(2) + スコア15列 = 18列
+     ※合計点列なし
+
+   スコア15列内訳:
+     握力4 + 上体2 + 長座1 + 反復2 + シャトル1 + 50m1 + 幅2 + 球2 = 15
+
+   幅配分:
+     No    = 10pt
+     名前  = 75pt × 2 = 150pt
+     スコア = (997.9 - 10 - 150) / 15 = 55.9pt ≈ 56pt
+   合計: 10 + 150 + 56×15 = 1000pt ≒ 997.9pt ✓
+   ========================================== */
+@media print{
+  body{background:white;}
+  .toolbar,.roster-panel{display:none!important;}
+  .page-wrap{display:block;padding:0;margin:0;max-width:100%;}
+  .sheet-wrap{border-radius:0;box-shadow:none;}
+  .sheet-hd{padding:5px 0 3px;}
+  .sheet-hd .ttl{font-size:11pt;letter-spacing:.1em;}
+  .sheet-hd .sub{font-size:7pt;}
+  .date-row{padding:3px 8px;font-size:8pt;}
+  .tbl-scroll{overflow:visible;}
+  table.rec{font-size:6.5pt;table-layout:fixed;width:100%;}
+  table.rec th{font-size:5.8pt;padding:2px 1px;line-height:1.2;}
+  table.rec th.h-sub{font-size:5.2pt;padding:2px 0;}
+  table.rec td{height:15px;padding:1px 0;}
+  table.rec td.td-name{font-size:7pt;padding:1px 3px;}
+  table.rec td.td-name .name-fit{display:inline-block;width:100%;white-space:nowrap;overflow:hidden;}
+  table.rec td.td-no{font-size:6pt;}
+  table.rec tfoot td{height:15px;font-size:6pt;}
+  .foot-note{font-size:6pt;padding:2px 6px;}
+  .w-no  {width:10pt!important;}
+  .w-name{width:75pt!important;}
+  .w-s   {width:56pt!important;}
+  @page{size:B4 landscape;margin:6mm;}
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>🏃 新体力テスト 記録用紙</h1>
+  <label class="tlbl">学年:
+    <select id="grade-sel" onchange="updateTitle()">
+      <option>1年</option><option>2年</option><option>3年</option>
+      <option>4年</option><option>5年</option><option>6年</option>
+    </select>
+  </label>
+  <label class="tlbl">クラス:
+    <select id="class-sel" onchange="updateTitle()">
+      <option>1組</option><option>2組</option><option selected>3組</option>
+    </select>
+  </label>
+  <label class="tlbl">実施日:
+    <input id="date-tb" type="text" placeholder="　年　月　日"
+      oninput="document.getElementById('date-ri').value=this.value">
+  </label>
+  <button class="btn-print" onclick="window.print()">🖨 印刷（B4横）</button>
+</div>
+
+<div class="page-wrap">
+
+  <div class="roster-panel">
+    <div class="roster-hd">📋 名簿貼り付け</div>
+    <div class="roster-hint">
+      Excel・スプレッドシートから<br>
+      氏名列をコピーして貼り付け<br>
+      （1行1名・改行区切り）
+    </div>
+    <textarea class="roster-ta" id="roster-area"></textarea>
+    <button class="btn-apply" onclick="applyRoster()">↓ 記録用紙に反映</button>
+  </div>
+
+  <div class="sheet-wrap">
+    <div class="sheet-hd">
+      <div class="ttl" id="ttl-main">新体力テスト 記録用紙　1年 3組</div>
+      <div class="sub">文部科学省 新体力テスト実施要項準拠</div>
+    </div>
+    <div class="date-row">
+      実施日：<input class="date-inp" id="date-ri" type="text"
+        placeholder="　　年　　月　　日"
+        oninput="document.getElementById('date-tb').value=this.value">
+    </div>
+
+    <div class="tbl-scroll">
+      <!--
+        スコア列 15列（合計点なし）:
+        握力：右1回目[0] 右2回目[1] 左1回目[2] 左2回目[3]  →sep-r:3
+        上体起こし：1回目[4] 2回目[5]                        →sep-r:5
+        長座体前屈：[6]                                       →sep-r:6
+        反復横とび：1回目[7] 2回目[8]                        →sep-r:8
+        20mシャトル：[9]                                      →sep-r:9
+        50m走：[10]                                           →sep-r:10
+        立ち幅とび：1回目[11] 2回目[12]                      →sep-r:12
+        ボール投げ：1回目[13] 2回目[14]                      →sep-r:14
+      -->
+      <table class="rec">
+        <colgroup>
+          <col class="w-no">
+          <col class="w-name">
+          <col class="w-s"><col class="w-s"><col class="w-s"><col class="w-s">
+          <col class="w-s"><col class="w-s">
+          <col class="w-s">
+          <col class="w-s"><col class="w-s">
+          <col class="w-s">
+          <col class="w-s">
+          <col class="w-s"><col class="w-s">
+          <col class="w-s"><col class="w-s">
+          <col class="w-name">
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="w-no h-dark"   rowspan="3">No.</th>
+            <th class="w-name h-dark" rowspan="3">名　前</th>
+            <!-- 握力 4列 -->
+            <th colspan="4" class="sep-r">握　力（kg）</th>
+            <!-- 上体起こし 2列 -->
+            <th colspan="2" class="sep-r">上体起こし（回）</th>
+            <!-- 長座体前屈 1列 -->
+            <th rowspan="3" class="sep-r">長座体前屈<br><small>cm</small></th>
+            <!-- 反復横とび 2列 -->
+            <th colspan="2" class="sep-r">反復横とび（点）</th>
+            <!-- シャトルラン 1列 -->
+            <th rowspan="3" class="sep-r">20mシャトル<br>ラン<br><small>回</small></th>
+            <!-- 50m走 1列 -->
+            <th rowspan="3" class="sep-r">50m走<br><small>秒</small></th>
+            <!-- 立ち幅とび 2列 -->
+            <th colspan="2" class="sep-r">立ち幅とび（cm）</th>
+            <!-- ボール投げ 2列 -->
+            <th colspan="2" class="sep-r">ボール投げ（m）</th>
+            <!-- 右側名前 -->
+            <th class="w-name h-dark" rowspan="3">名　前</th>
+          </tr>
+          <tr>
+            <!-- 握力：右 / 左 -->
+            <th colspan="2" class="sep-r" style="font-size:8.5px;">右　手</th>
+            <th colspan="2" class="sep-r" style="font-size:8.5px;">左　手</th>
+            <!-- 上体起こし -->
+            <th rowspan="2" class="h-sub">1回目</th>
+            <th rowspan="2" class="h-sub sep-r">2回目</th>
+            <!-- 反復横とび -->
+            <th rowspan="2" class="h-sub">1回目</th>
+            <th rowspan="2" class="h-sub sep-r">2回目</th>
+            <!-- 立ち幅とび -->
+            <th rowspan="2" class="h-sub">1回目</th>
+            <th rowspan="2" class="h-sub sep-r">2回目</th>
+            <!-- ボール投げ -->
+            <th rowspan="2" class="h-sub">1回目</th>
+            <th rowspan="2" class="h-sub sep-r">2回目</th>
+          </tr>
+          <tr>
+            <!-- 握力サブ行 -->
+            <th class="h-sub">1回目</th>
+            <th class="h-sub sep-r">2回目</th>
+            <th class="h-sub">1回目</th>
+            <th class="h-sub sep-r">2回目</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+    <div class="foot-note">
+      ※ 握力は右・左それぞれ2回計測。上体起こし・反復横とび・立ち幅とび・ボール投げは2回計測し記録。空欄は見学・欠席。
+    </div>
+  </div>
+</div>
+
+<script>
+// スコア列15列・sep-r（右太線）を入れる列インデックス
+const N_SCORE = 15;
+const SEP = new Set([3, 5, 6, 8, 9, 10, 12, 14]);
+
+let names = [
+  "青山　蓮","伊藤　さくら","上田　拓海","江口　ひなた","大橋　颯太",
+  "加藤　美月","木村　陽斗","小林　えみ","近藤　大翔","佐々木　葵",
+  "鈴木　悠人","田中　詩音","辻　勇気","中村　ほのか","西田　凌"
+];
+
+function buildTable(){
+  const tbody = document.getElementById('tbody');
+  const tfoot = document.getElementById('tfoot');
+  tbody.innerHTML = '';
+  tfoot.innerHTML = '';
+
+  names.forEach((name, i) => {
+    const tr = document.createElement('tr');
+
+    // No.
+    const no = document.createElement('td');
+    no.className = 'td-no w-no';
+    no.textContent = i + 1;
+    tr.appendChild(no);
+
+    // 名前（左）
+    tr.appendChild(mkNameTd(name));
+
+    // スコアセル（15列・空白・鉛筆記入用）
+    for(let c = 0; c < N_SCORE; c++){
+      const td = document.createElement('td');
+      td.className = 'w-s';
+      if(SEP.has(c)) td.classList.add('sep-r');
+      tr.appendChild(td);
+    }
+
+    // 名前（右）
+    tr.appendChild(mkNameTd(name));
+
+    tbody.appendChild(tr);
+  });
+
+  // クラス平均フッター
+  const fr = document.createElement('tr');
+  const fhd = document.createElement('td');
+  fhd.colSpan = 2;
+  fhd.style.cssText = 'text-align:right;padding-right:8px;font-weight:700;';
+  fhd.textContent = 'クラス平均';
+  fr.appendChild(fhd);
+  for(let c = 0; c < N_SCORE; c++){
+    const fd = document.createElement('td');
+    if(SEP.has(c)) fd.classList.add('sep-r');
+    fr.appendChild(fd);
+  }
+  fr.appendChild(document.createElement('td')); // 名前右の空セル
+  tfoot.appendChild(fr);
+}
+
+function mkNameTd(name){
+  const td = document.createElement('td');
+  td.className = 'td-name w-name';
+  const span = document.createElement('span');
+  span.className = 'name-fit';
+  span.textContent = name || '';
+  td.appendChild(span);
+  return td;
+}
+
+// セル幅に収まるようにscaleXで縮小（最小60%まで）
+function fitAllNames(){
+  document.querySelectorAll('.td-name').forEach(td => {
+    const span = td.querySelector('.name-fit');
+    if(!span) return;
+    span.style.transform = 'scaleX(1)';
+    span.style.fontSize  = '';
+    const cellW = td.clientWidth - 10; // padding分引く
+    const textW = span.scrollWidth;
+    if(textW > cellW && cellW > 0){
+      const ratio = Math.max(0.6, cellW / textW);
+      span.style.transform = `scaleX(${ratio.toFixed(3)})`;
+    }
+  });
+}
+
+function updateTitle(){
+  const g = document.getElementById('grade-sel').value;
+  const c = document.getElementById('class-sel').value;
+  document.getElementById('ttl-main').textContent = `新体力テスト 記録用紙　${g} ${c}`;
+}
+
+function applyRoster(){
+  const raw = document.getElementById('roster-area').value;
+  const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  if(!lines.length){ alert('名簿が空です。氏名を1行1人で入力してください。'); return; }
+  names = lines;
+  buildTable();
+  requestAnimationFrame(() => fitAllNames());
+}
+
+buildTable();
+requestAnimationFrame(() => fitAllNames());
+let roTimer;
+const ro = new ResizeObserver(() => { clearTimeout(roTimer); roTimer = setTimeout(fitAllNames, 60); });
+const tbl = document.querySelector('table.rec');
+if(tbl) ro.observe(tbl);
+</script>
+</body>
+</html>
