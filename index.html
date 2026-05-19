@@ -486,39 +486,53 @@ function loadPDF(file){
 }
 
 function parsePDFItems(items){
-  // C4th出力PDFの典型的な構造:
-  // 各行に「番号」「氏名」「性別(男/女)」が並ぶ
-  // y座標が同じ（±3pt）ものを同一行とみなす
+  // C4th出力PDFの列順: 番号(col0) → 性別(col1) → 氏名(col2)
+  // x座標でソートし、左から順に番号・性別・氏名として読み取る
   pdfData = [];
 
-  // y座標でグループ化
+  // y座標でグループ化（4pt単位で丸めて同一行とみなす）
   const rows = {};
   items.forEach(item=>{
-    const yk = Math.round(item.y / 4) * 4; // 4pt単位で丸めて行を統合
+    const yk = Math.round(item.y / 4) * 4;
     if(!rows[yk]) rows[yk] = [];
     rows[yk].push(item);
   });
 
-  // y降順（上から下）に処理
+  // y降順（ページ上から下の順）に処理
   const ySorted = Object.keys(rows).map(Number).sort((a,b)=>b-a);
 
   ySorted.forEach(yk=>{
-    const row = rows[yk].sort((a,b)=>a.x-b.x); // x昇順
+    // x昇順（左→右）にソート
+    const row = rows[yk].sort((a,b)=>a.x-b.x);
     const texts = row.map(r=>r.str).filter(s=>s.length>0);
 
-    // 行から番号・氏名・性別を探す
-    let no=null, nameStr=null, gender=null;
+    // 列順: [0]=番号, [1]=性別, [2]=氏名
+    // ただしヘッダー行や余分な列がある場合も考慮して走査する
+    let no=null, gender=null, nameStr=null;
 
-    texts.forEach((t,i)=>{
-      // 番号：1〜3桁の数字のみ
-      if(/^\d{1,3}$/.test(t) && no===null) no = parseInt(t);
-      // 性別：男 or 女
-      if((t==='男'||t==='女') && gender===null) gender = t;
-      // 氏名：漢字・ひらがな・カタカナ・スペースを含む2文字以上
-      if(/^[　-鿿＀-￯\s　]{2,}$/.test(t) && nameStr===null) nameStr = t.replace(/\s+/g,' ').trim();
-    });
+    for(let i=0; i<texts.length; i++){
+      const t = texts[i];
 
-    if(no!==null && nameStr && gender){
+      // 番号：1〜3桁の数字（まだ未取得の場合）
+      if(no===null && /^\d{1,3}$/.test(t)){
+        no = parseInt(t);
+        continue;
+      }
+      // 性別：番号の次に来る「男」か「女」
+      if(no!==null && gender===null && (t==='男'||t==='女')){
+        gender = t;
+        continue;
+      }
+      // 氏名：性別の次に来る日本語文字列（2文字以上）
+      if(no!==null && gender!==null && nameStr===null){
+        // 漢字・ひらがな・カタカナ・全角スペースを含む
+        if(/[\u3040-\u9FFF\uFF00-\uFFEF]/.test(t) && t.replace(/\s/g,'').length>=2){
+          nameStr = t.replace(/[\s\u3000]+/g,' ').trim();
+        }
+      }
+    }
+
+    if(no!==null && gender!==null && nameStr){
       pdfData.push({no, name:nameStr, gender});
     }
   });
