@@ -71,6 +71,10 @@ body{font-family:var(--font);background:#dde4ef;}
 }
 .btn-extract:hover{background:#5a8010;}
 .btn-extract:disabled{background:#bbb;cursor:not-allowed;}
+.sort-row{display:flex;align-items:center;gap:3px;padding:5px 8px;background:#f0f9e0;border-bottom:1px solid #cce070;flex-wrap:wrap;}
+.sort-label{font-size:9.5px;color:#3d6210;white-space:nowrap;margin-right:2px;}
+.sort-btn{flex:1;padding:4px 2px;border:1.5px solid #8aab3c;border-radius:5px;background:white;color:#4a6e10;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;}
+.sort-btn.active-sort{background:#1a3a5c;border-color:#1a3a5c;color:white;}
 .manual-label{font-size:9.5px;color:#3d6210;padding:5px 10px 2px;background:#f3f9e3;border-top:1px solid #cce070;}
 .roster-ta{
   width:100%;min-height:260px;border:none;resize:vertical;
@@ -239,6 +243,13 @@ table.rec tfoot td{background:#c4daf2!important;font-weight:700;font-size:9.5px;
     <button class="btn-extract" id="btn-extract" onclick="extractAndApply()" disabled>
       ↓ 抽出して名簿に反映
     </button>
+
+    <!-- ソート選択 -->
+    <div class="sort-row">
+      <span class="sort-label">並び順:</span>
+      <button class="sort-btn active-sort" id="sort-no"   onclick="setSort('no')">番号順</button>
+      <button class="sort-btn"             id="sort-kana" onclick="setSort('kana')">あいうえお順</button>
+    </div>
 
     <!-- 手動入力エリア -->
     <div class="manual-label">✏️ 手動入力（1行1名）</div>
@@ -435,6 +446,13 @@ function updateTitle(){
 // ========== PDF名簿読み込み ==========
 let pdfData    = [];   // [{no, name, gender}, ...]
 let selGender  = '男'; // 選択中の性別
+let selSort    = 'no'; // 'no' | 'kana'
+
+function setSort(s){
+  selSort = s;
+  document.getElementById('sort-no')  .className = 'sort-btn' + (s==='no'  ?' active-sort':'');
+  document.getElementById('sort-kana').className = 'sort-btn' + (s==='kana'?' active-sort':'');
+}
 
 function selectGender(g){
   selGender = g;
@@ -486,58 +504,61 @@ function loadPDF(file){
 }
 
 function parsePDFItems(items){
-  // C4th出力PDFの列順: 番号(col0) → 性別(col1) → 氏名(col2)
-  // x座標でソートし、左から順に番号・性別・氏名として読み取る
+  // C4th 学級名簿PDF構造:
+  //   タイトル行: 「1年 1組 学級名簿」→ スキップ
+  //   ヘッダー行: 「番号」「性別」「名前」→ スキップ
+  //   データ行:   番号(数字) | 男/女 | 氏名（スペース区切りで苗字・名前が別テキストの場合あり）
+  //   末尾空行: スキップ
   pdfData = [];
 
-  // y座標でグループ化（4pt単位で丸めて同一行とみなす）
+  // y座標でグループ化（6pt単位で丸めて同一行とみなす）
   const rows = {};
   items.forEach(item=>{
-    const yk = Math.round(item.y / 4) * 4;
+    const yk = Math.round(item.y / 6) * 6;
     if(!rows[yk]) rows[yk] = [];
     rows[yk].push(item);
   });
 
-  // y降順（ページ上から下の順）に処理
+  // y降順（ページ上→下）に処理
   const ySorted = Object.keys(rows).map(Number).sort((a,b)=>b-a);
 
+  // スキップ対象ワード（ヘッダー・タイトル）
+  const SKIP_WORDS = new Set(['番号','性別','名前','氏名','学級名簿','名　前','番　号','性　別']);
+
   ySorted.forEach(yk=>{
-    // x昇順（左→右）にソート
-    const row = rows[yk].sort((a,b)=>a.x-b.x);
-    const texts = row.map(r=>r.str).filter(s=>s.length>0);
+    const row = rows[yk].sort((a,b)=>a.x-b.x); // x昇順（左→右）
+    const texts = row.map(r=>r.str.trim()).filter(s=>s.length>0);
+    if(texts.length===0) return;
 
-    // 列順: [0]=番号, [1]=性別, [2]=氏名
-    // ただしヘッダー行や余分な列がある場合も考慮して走査する
-    let no=null, gender=null, nameStr=null;
+    // タイトル行・ヘッダー行をスキップ
+    // → 行内のテキストがすべてSKIP_WORDSに含まれる、または数字を含まず「番号」「性別」等がある
+    const hasSkipWord = texts.some(t => SKIP_WORDS.has(t) || /名簿|学級|年\s*\d+組/.test(t));
+    if(hasSkipWord) return;
 
-    for(let i=0; i<texts.length; i++){
-      const t = texts[i];
+    // 最初のテキストが1〜3桁の数字でなければデータ行ではない
+    if(!/^\d{1,3}$/.test(texts[0])) return;
 
-      // 番号：1〜3桁の数字（まだ未取得の場合）
-      if(no===null && /^\d{1,3}$/.test(t)){
-        no = parseInt(t);
-        continue;
-      }
-      // 性別：番号の次に来る「男」か「女」
-      if(no!==null && gender===null && (t==='男'||t==='女')){
-        gender = t;
-        continue;
-      }
-      // 氏名：性別の次に来る日本語文字列（2文字以上）
-      if(no!==null && gender!==null && nameStr===null){
-        // 漢字・ひらがな・カタカナ・全角スペースを含む
-        if(/[\u3040-\u9FFF\uFF00-\uFFEF]/.test(t) && t.replace(/\s/g,'').length>=2){
-          nameStr = t.replace(/[\s\u3000]+/g,' ').trim();
-        }
-      }
-    }
+    const no = parseInt(texts[0]);
 
-    if(no!==null && gender!==null && nameStr){
-      pdfData.push({no, name:nameStr, gender});
-    }
+    // 2番目が「男」か「女」
+    if(texts.length < 2) return;
+    const gender = texts[1];
+    if(gender !== '男' && gender !== '女') return;
+
+    // 3番目以降をすべて氏名として結合
+    // （「大野」「帆嵩」のように苗字・名前が別テキストになる場合に対応）
+    if(texts.length < 3) return;
+    const nameParts = texts.slice(2).filter(t=>{
+      // 数字のみや記号のみはスキップ
+      return /[\u3040-\u9FFF\u30A0-\u30FF\uFF65-\uFF9F\u4E00-\u9FFF]/.test(t);
+    });
+    if(nameParts.length === 0) return;
+    const nameStr = nameParts.join('　').trim();
+
+    pdfData.push({no, name:nameStr, gender});
   });
 
-  // 名簿番号でソート
+  // デフォルトは番号順ソート
   pdfData.sort((a,b)=>a.no-b.no);
   updateExtractInfo();
 
@@ -561,13 +582,20 @@ function updateExtractInfo(){
 
 function extractAndApply(){
   if(pdfData.length===0){ alert('PDFが読み込まれていません'); return; }
-  const filtered = selGender==='全' ? pdfData
+  let filtered = selGender==='全' ? [...pdfData]
     : pdfData.filter(d=>d.gender===selGender);
   if(filtered.length===0){ alert('該当する児童がいません'); return; }
+
+  // ソート
+  if(selSort==='no'){
+    filtered.sort((a,b)=>a.no-b.no);
+  } else {
+    filtered.sort((a,b)=>a.name.localeCompare(b.name,'ja'));
+  }
+
   names = filtered.map(d=>d.name);
   buildTable();
   requestAnimationFrame(()=>fitAllNames());
-  // テキストエリアにも反映
   document.getElementById('roster-area').value = names.join('\n');
 }
 
