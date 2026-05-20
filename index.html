@@ -136,21 +136,31 @@ table.rec tfoot td{background:#c4daf2!important;font-weight:700;font-size:9.5px;
 @media print{
   body{background:white;}
   .toolbar,.roster-panel{display:none!important;}
-  .page-wrap{display:block;padding:0;margin:0;max-width:100%;}
-  .sheet-wrap{border-radius:0;box-shadow:none;}
-  .sheet-hd{padding:5px 0 3px;}
+  .page-wrap{display:block;padding:0;margin:0;max-width:100%;height:100%;}
+  .sheet-wrap{border-radius:0;box-shadow:none;height:100%;}
+  /* 用紙縦いっぱいにテーブルを広げる */
+  .sheet-hd{padding:4px 0 2px;}
   .sheet-hd .ttl{font-size:11pt;letter-spacing:.1em;}
   .sheet-hd .sub{font-size:7pt;}
   .date-row{padding:3px 8px;font-size:8pt;}
-  .tbl-scroll{overflow:visible;}
-  table.rec{font-size:6.5pt;table-layout:fixed;width:100%;}
+  .tbl-scroll{overflow:visible;height:calc(100% - 60pt);}
+  table.rec{
+    font-size:6.5pt;table-layout:fixed;width:100%;
+    /* 縦いっぱいに広げる */
+    height:calc(100vh - 60pt);
+    border-collapse:collapse;
+  }
   table.rec th{font-size:5.8pt;padding:2px 1px;line-height:1.2;}
   table.rec th.h-sub{font-size:5.2pt;padding:2px 0;}
-  table.rec td{height:15px;padding:1px 0;}
+  /* tdの高さはautoにしてtbodyで均等配分 */
+  table.rec td{padding:1px 0;height:auto;}
+  table.rec tbody{height:100%;}
+  /* tbody内の各trを均等に広げる */
+  table.rec tbody tr{height:1%;}
   table.rec td.td-name{font-size:7pt;padding:1px 3px;}
   table.rec td.td-name .name-fit{display:inline-block;width:100%;white-space:nowrap;overflow:hidden;}
   table.rec td.td-no{font-size:6pt;}
-  table.rec tfoot td{height:15px;font-size:6pt;}
+  table.rec tfoot td{font-size:6pt;height:14pt;}
   .foot-note{font-size:6pt;padding:2px 6px;}
   .w-no  {width:10pt!important;}
   .w-name{width:75pt!important;}
