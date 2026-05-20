@@ -46,36 +46,9 @@ body{font-family:var(--font);background:#dde4ef;}
   box-shadow:0 2px 10px rgba(0,0,0,.09);overflow:hidden;
 }
 .roster-hd{background:#7da832;color:white;padding:7px 11px;font-size:12px;font-weight:700;letter-spacing:.05em;}
-.pdf-zone{padding:8px 10px;background:#f3f9e3;border-bottom:1px solid #cce070;}
-.pdf-drop{
-  border:2px dashed #8aab3c;border-radius:7px;
-  padding:10px 6px;text-align:center;cursor:pointer;
-  background:#fafff0;transition:background .2s;
-  font-size:10px;color:#4a6e10;line-height:1.7;
-}
-.pdf-drop:hover,.pdf-drop.drag-over{background:#edffc0;border-color:#5a8a10;}
-.pdf-drop input[type=file]{display:none;}
-.pdf-name{font-size:9.5px;color:#2d6a2d;margin-top:4px;word-break:break-all;min-height:14px;padding:0 2px;}
-.gender-row{display:flex;gap:4px;padding:6px 8px;background:#f0f9e0;border-bottom:1px solid #cce070;}
-.gender-btn{
-  flex:1;padding:5px 2px;border:1.5px solid #8aab3c;border-radius:5px;
-  background:white;color:#4a6e10;font-size:11px;font-weight:700;
-  cursor:pointer;text-align:center;font-family:var(--font);
-}
-.gender-btn.active-male  {background:#3a7bd5;border-color:#2a5faa;color:white;}
-.gender-btn.active-female{background:#d5508a;border-color:#aa3a6e;color:white;}
-.extract-info{font-size:9.5px;color:#555;padding:4px 10px;background:#f8f8f8;border-bottom:1px solid #e0e0e0;min-height:18px;}
-.btn-extract{
-  width:100%;padding:7px;background:#7da832;color:white;
-  border:none;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.04em;
-}
-.btn-extract:hover{background:#5a8010;}
-.btn-extract:disabled{background:#bbb;cursor:not-allowed;}
-.sort-row{display:flex;align-items:center;gap:3px;padding:5px 8px;background:#f0f9e0;border-bottom:1px solid #cce070;flex-wrap:wrap;}
-.sort-label{font-size:9.5px;color:#3d6210;white-space:nowrap;margin-right:2px;}
-.sort-btn{flex:1;padding:4px 2px;border:1.5px solid #8aab3c;border-radius:5px;background:white;color:#4a6e10;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;}
-.sort-btn.active-sort{background:#1a3a5c;border-color:#1a3a5c;color:white;}
-.manual-label{font-size:9.5px;color:#3d6210;padding:5px 10px 2px;background:#f3f9e3;border-top:1px solid #cce070;}
+
+
+.roster-hint{font-size:10px;color:#3d6210;padding:5px 9px;background:#f3f9e3;border-bottom:1px solid #cce070;line-height:1.65;}
 .roster-ta{
   width:100%;min-height:260px;border:none;resize:vertical;
   font-family:var(--font);font-size:12px;padding:7px 9px;
@@ -185,9 +158,6 @@ table.rec tfoot td{background:#c4daf2!important;font-weight:700;font-size:9.5px;
   @page{size:B4 landscape;margin:6mm;}
 }
 </style>
-<!-- PDF.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
 <body>
 
@@ -214,47 +184,14 @@ table.rec tfoot td{background:#c4daf2!important;font-weight:700;font-size:9.5px;
 <div class="page-wrap">
 
   <div class="roster-panel">
-    <div class="roster-hd">📋 名簿読み込み</div>
-
-    <!-- PDFアップロード -->
-    <div class="pdf-zone">
-      <div class="pdf-drop" id="pdf-drop"
-        onclick="document.getElementById('pdf-file').click()"
-        ondragover="event.preventDefault();this.classList.add('drag-over')"
-        ondragleave="this.classList.remove('drag-over')"
-        ondrop="handleDrop(event)">
-        <input type="file" id="pdf-file" accept=".pdf" onchange="loadPDF(this.files[0])">
-        📄 C4th PDFをここに<br>ドロップ or クリック
-      </div>
-      <div class="pdf-name" id="pdf-name">ファイル未選択</div>
+    <div class="roster-hd">📋 名簿貼り付け</div>
+    <div class="roster-hint">
+      GASツールでコピーした<br>
+      氏名リストを貼り付け<br>
+      （1行1名・改行区切り）
     </div>
-
-    <!-- 性別選択 -->
-    <div class="gender-row">
-      <button class="gender-btn active-male" id="btn-male"   onclick="selectGender('男')">男子</button>
-      <button class="gender-btn"             id="btn-female" onclick="selectGender('女')">女子</button>
-      <button class="gender-btn"             id="btn-all"    onclick="selectGender('全')">全員</button>
-    </div>
-
-    <!-- 抽出情報 -->
-    <div class="extract-info" id="extract-info">PDFを読み込んでください</div>
-
-    <!-- 抽出して反映ボタン -->
-    <button class="btn-extract" id="btn-extract" onclick="extractAndApply()" disabled>
-      ↓ 抽出して名簿に反映
-    </button>
-
-    <!-- ソート選択 -->
-    <div class="sort-row">
-      <span class="sort-label">並び順:</span>
-      <button class="sort-btn active-sort" id="sort-no"   onclick="setSort('no')">番号順</button>
-      <button class="sort-btn"             id="sort-kana" onclick="setSort('kana')">あいうえお順</button>
-    </div>
-
-    <!-- 手動入力エリア -->
-    <div class="manual-label">✏️ 手動入力（1行1名）</div>
-    <textarea class="roster-ta" id="roster-area"></textarea>
-    <button class="btn-apply" onclick="applyRoster()">↓ 手動入力を反映</button>
+    <textarea class="roster-ta" id="roster-area" placeholder="氏名を貼り付け..."></textarea>
+    <button class="btn-apply" onclick="applyRoster()">↓ 記録用紙に反映</button>
   </div>
 
   <div class="sheet-wrap">
@@ -441,162 +378,6 @@ function updateTitle(){
   const g = document.getElementById('grade-sel').value;
   const c = document.getElementById('class-sel').value;
   document.getElementById('ttl-main').textContent = `新体力テスト 記録用紙　${g} ${c}`;
-}
-
-// ========== PDF名簿読み込み ==========
-let pdfData    = [];   // [{no, name, gender}, ...]
-let selGender  = '男'; // 選択中の性別
-let selSort    = 'no'; // 'no' | 'kana'
-
-function setSort(s){
-  selSort = s;
-  document.getElementById('sort-no')  .className = 'sort-btn' + (s==='no'  ?' active-sort':'');
-  document.getElementById('sort-kana').className = 'sort-btn' + (s==='kana'?' active-sort':'');
-}
-
-function selectGender(g){
-  selGender = g;
-  document.getElementById('btn-male')  .className = 'gender-btn' + (g==='男'?' active-male':'');
-  document.getElementById('btn-female').className = 'gender-btn' + (g==='女'?' active-female':'');
-  document.getElementById('btn-all')   .className = 'gender-btn' + (g==='全'?' active-male':'');
-  updateExtractInfo();
-}
-
-function handleDrop(e){
-  e.preventDefault();
-  document.getElementById('pdf-drop').classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if(file && file.type==='application/pdf') loadPDF(file);
-}
-
-function loadPDF(file){
-  if(!file) return;
-  document.getElementById('pdf-name').textContent = '読み込み中...';
-  document.getElementById('extract-info').textContent = '解析中...';
-  document.getElementById('btn-extract').disabled = true;
-
-  const reader = new FileReader();
-  reader.onload = async function(e){
-    try{
-      const typedArray = new Uint8Array(e.target.result);
-      const pdf = await pdfjsLib.getDocument({data: typedArray}).promise;
-      const allText = [];
-      for(let p=1; p<=pdf.numPages; p++){
-        const page = await pdf.getPage(p);
-        const content = await page.getTextContent();
-        // x座標でソートして行を再構成
-        const items = content.items.map(item=>({
-          x: Math.round(item.transform[4]),
-          y: Math.round(item.transform[5]),
-          str: item.str.trim()
-        })).filter(i=>i.str.length>0);
-        allText.push(...items);
-      }
-      parsePDFItems(allText);
-      document.getElementById('pdf-name').textContent = '✅ ' + file.name;
-    } catch(err){
-      document.getElementById('pdf-name').textContent = '❌ 読み込み失敗';
-      document.getElementById('extract-info').textContent = 'エラー: ' + err.message;
-      console.error(err);
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function parsePDFItems(items){
-  // C4th 学級名簿PDF構造:
-  //   タイトル行: 「1年 1組 学級名簿」→ スキップ
-  //   ヘッダー行: 「番号」「性別」「名前」→ スキップ
-  //   データ行:   番号(数字) | 男/女 | 氏名（スペース区切りで苗字・名前が別テキストの場合あり）
-  //   末尾空行: スキップ
-  pdfData = [];
-
-  // y座標でグループ化（6pt単位で丸めて同一行とみなす）
-  const rows = {};
-  items.forEach(item=>{
-    const yk = Math.round(item.y / 6) * 6;
-    if(!rows[yk]) rows[yk] = [];
-    rows[yk].push(item);
-  });
-
-  // y降順（ページ上→下）に処理
-  const ySorted = Object.keys(rows).map(Number).sort((a,b)=>b-a);
-
-  // スキップ対象ワード（ヘッダー・タイトル）
-  const SKIP_WORDS = new Set(['番号','性別','名前','氏名','学級名簿','名　前','番　号','性　別']);
-
-  ySorted.forEach(yk=>{
-    const row = rows[yk].sort((a,b)=>a.x-b.x); // x昇順（左→右）
-    const texts = row.map(r=>r.str.trim()).filter(s=>s.length>0);
-    if(texts.length===0) return;
-
-    // タイトル行・ヘッダー行をスキップ
-    // → 行内のテキストがすべてSKIP_WORDSに含まれる、または数字を含まず「番号」「性別」等がある
-    const hasSkipWord = texts.some(t => SKIP_WORDS.has(t) || /名簿|学級|年\s*\d+組/.test(t));
-    if(hasSkipWord) return;
-
-    // 最初のテキストが1〜3桁の数字でなければデータ行ではない
-    if(!/^\d{1,3}$/.test(texts[0])) return;
-
-    const no = parseInt(texts[0]);
-
-    // 2番目が「男」か「女」
-    if(texts.length < 2) return;
-    const gender = texts[1];
-    if(gender !== '男' && gender !== '女') return;
-
-    // 3番目以降をすべて氏名として結合
-    // （「大野」「帆嵩」のように苗字・名前が別テキストになる場合に対応）
-    if(texts.length < 3) return;
-    const nameParts = texts.slice(2).filter(t=>{
-      // 数字のみや記号のみはスキップ
-      return /[\u3040-\u9FFF\u30A0-\u30FF\uFF65-\uFF9F\u4E00-\u9FFF]/.test(t);
-    });
-    if(nameParts.length === 0) return;
-    const nameStr = nameParts.join('　').trim();
-
-    pdfData.push({no, name:nameStr, gender});
-  });
-
-  // デフォルトは番号順ソート
-  pdfData.sort((a,b)=>a.no-b.no);
-  updateExtractInfo();
-
-  if(pdfData.length>0){
-    document.getElementById('btn-extract').disabled = false;
-  } else {
-    document.getElementById('extract-info').textContent = '⚠️ データを抽出できませんでした。手動入力をご利用ください。';
-  }
-}
-
-function updateExtractInfo(){
-  if(pdfData.length===0) return;
-  const males   = pdfData.filter(d=>d.gender==='男').length;
-  const females = pdfData.filter(d=>d.gender==='女').length;
-  const filtered = selGender==='全' ? pdfData
-    : pdfData.filter(d=>d.gender===selGender);
-  const label = selGender==='男'?'男子':selGender==='女'?'女子':'全員';
-  document.getElementById('extract-info').textContent =
-    `全${pdfData.length}名（男${males}・女${females}）→ ${label}${filtered.length}名を抽出`;
-}
-
-function extractAndApply(){
-  if(pdfData.length===0){ alert('PDFが読み込まれていません'); return; }
-  let filtered = selGender==='全' ? [...pdfData]
-    : pdfData.filter(d=>d.gender===selGender);
-  if(filtered.length===0){ alert('該当する児童がいません'); return; }
-
-  // ソート
-  if(selSort==='no'){
-    filtered.sort((a,b)=>a.no-b.no);
-  } else {
-    filtered.sort((a,b)=>a.name.localeCompare(b.name,'ja'));
-  }
-
-  names = filtered.map(d=>d.name);
-  buildTable();
-  requestAnimationFrame(()=>fitAllNames());
-  document.getElementById('roster-area').value = names.join('\n');
 }
 
 function applyRoster(){
